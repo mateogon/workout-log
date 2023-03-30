@@ -10,6 +10,8 @@ const MenuComponent = ({ workoutId, navigation }) => {
     setMenuVisible(!menuVisible);
   };
 
+  //test
+
   const handleDeleteWorkout = () => {
     // Delete the workout
     deleteWorkout(workoutId);
