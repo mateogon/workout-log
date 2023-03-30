@@ -1,6 +1,8 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import { NavigationContainer } from "@react-navigation/native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Collapsible from "react-native-collapsible";
@@ -13,10 +15,12 @@ import { ExercisesScreen } from "../../features/workout/screens/exercises.screen
 import { WorkoutsContext } from "../../services/workouts/workouts.context";
 import { WorkoutsContextProvider } from "../../services/workouts/workouts.context";
 import { ExerciseContextProvider } from "../../services/exercises/exercises.context";
+import { ExerciseSelectionProvider } from "../../services/exercises/exercise-selection.context";
 import { WorkoutDetailsScreen } from "../../features/workout/screens/workout-details.screen";
 import { WorkoutEditScreen } from "../../features/workout/screens/workout-edit.screen";
 import { BottomTabBar } from "@react-navigation/bottom-tabs";
-
+import { Spacer } from "../../components/spacer/spacer.component";
+import { formatTime } from "../../utils/dateFormat";
 const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
   History: [Ionicons, "time-sharp", 25],
@@ -25,14 +29,18 @@ const TAB_ICONS = {
   Settings: [Ionicons, "settings", 25],
 };
 const TAB_ICONS_COLORS = {
-  Active: "tomato",
+  Active: "#6200ee",
   Inactive: "gray",
 };
 
-const createScreenOptions = ({ route }) => {
+const createScreenOptions = ({ route }, currentRouteName) => {
   const [IconComponent, iconName] = TAB_ICONS[route.name];
   return {
-    headerShown: false,
+    headerShown:
+      currentRouteName !== "WorkoutEdit" &&
+      currentRouteName !== "WorkoutDetails" &&
+      currentRouteName !== "ExercisePicker", //&&
+    //currentRouteName !== "Workouts",
     tabBarIcon: ({ focused, size }) => {
       const Color = focused
         ? TAB_ICONS_COLORS["Active"]
@@ -50,12 +58,31 @@ const createScreenOptions = ({ route }) => {
   };
 };
 
-const CustomTabBar = ({ tabBarProps, ongoingWorkoutId, children }) => {
+const CustomTabBar = ({
+  tabBarProps,
+  ongoingWorkoutId,
+  children,
+  currentRouteName,
+}) => {
   const navigation = useNavigation();
-  const route = useRoute();
 
   const renderOngoingWorkoutBar = () => {
-    if (!ongoingWorkoutId || route.name === "WorkoutEdit") return null;
+    if (
+      !ongoingWorkoutId ||
+      currentRouteName === "WorkoutEdit" ||
+      currentRouteName === "ExercisePicker"
+    )
+      return null;
+    const [formattedTime, setFormattedTime] = useState(
+      formatTime(ongoingWorkoutId)
+    );
+
+    useEffect(() => {
+      const intervalId = setInterval(() => {
+        setFormattedTime(formatTime(ongoingWorkoutId));
+      }, 1000);
+      return () => clearInterval(intervalId);
+    }, [ongoingWorkoutId]);
 
     return (
       <TouchableOpacity
@@ -64,35 +91,40 @@ const CustomTabBar = ({ tabBarProps, ongoingWorkoutId, children }) => {
         }}
       >
         <View style={styles.minimizedBar}>
+          <Spacer position="top" size="medium" />
           <Text style={styles.minimizedBarText}>
-            Ongoing Workout: {ongoingWorkoutId}
+            Ongoing Workout: {formattedTime}
           </Text>
           <Ionicons name="chevron-up" size={20} color="black" />
         </View>
       </TouchableOpacity>
     );
   };
-
+  const shouldRenderTabBar =
+    currentRouteName !== "WorkoutEdit" && currentRouteName !== "ExercisePicker";
   return (
     <>
       {renderOngoingWorkoutBar()}
-      <BottomTabBar {...tabBarProps}>{children}</BottomTabBar>
+      {shouldRenderTabBar && (
+        <BottomTabBar {...tabBarProps}>{children}</BottomTabBar>
+      )}
     </>
   );
 };
 
-const AppNavigatorContent = () => {
+const AppNavigatorContent = ({ currentRouteName }) => {
   const { ongoingWorkoutId, retrieveWorkout } = useContext(WorkoutsContext);
-
+  console.log("AppNavigatorContent currentRouteName", currentRouteName);
   return (
     <>
       <Tab.Navigator
         initialRouteName="Workouts"
-        screenOptions={createScreenOptions}
+        screenOptions={(route) => createScreenOptions(route, currentRouteName)}
         tabBar={(tabBarProps) => (
           <CustomTabBar
             tabBarProps={tabBarProps}
             ongoingWorkoutId={ongoingWorkoutId}
+            currentRouteName={currentRouteName}
           />
         )}
       >
@@ -106,12 +138,31 @@ const AppNavigatorContent = () => {
 };
 
 export const AppNavigator = () => {
+  const [currentRouteName, setCurrentRouteName] = useState(null);
+
+  const getCurrentRouteName = (state) => {
+    const route = state.routes[state.index];
+    if (route.state) {
+      return getCurrentRouteName(route.state);
+    }
+    return route.name;
+  };
+
   return (
-    <ExerciseContextProvider>
-      <WorkoutsContextProvider>
-        <AppNavigatorContent />
-      </WorkoutsContextProvider>
-    </ExerciseContextProvider>
+    <ExerciseSelectionProvider>
+      <ExerciseContextProvider>
+        <WorkoutsContextProvider>
+          <NavigationContainer
+            onStateChange={(state) =>
+              setCurrentRouteName(getCurrentRouteName(state))
+            }
+            independent={true}
+          >
+            <AppNavigatorContent currentRouteName={currentRouteName} />
+          </NavigationContainer>
+        </WorkoutsContextProvider>
+      </ExerciseContextProvider>
+    </ExerciseSelectionProvider>
   );
 };
 
@@ -123,6 +174,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "grey",
+    borderTopColor: "grey",
+    borderTopWidth: 1,
   },
   minimizedBarText: {
     fontSize: 18,

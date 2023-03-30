@@ -27,11 +27,28 @@ export const WorkoutsContextProvider = ({ children }) => {
   useEffect(() => {
     fetchWorkouts();
   }, []);
+  useEffect(() => {
+    console.log("Workouts context updated:", workouts);
+  }, [workouts]);
   const startWorkout = (workoutId) => {
     setOngoingWorkoutId(workoutId);
   };
 
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
+    if (ongoingWorkoutId) {
+      // Retrieve the ongoing workout
+      const ongoingWorkout = await retrieveWorkout(ongoingWorkoutId);
+
+      // Check if the ongoing workout is empty (i.e., no exercises)
+      const isEmptyWorkout = ongoingWorkout.exercises.length === 0;
+
+      // If the workout is empty, delete it
+      if (isEmptyWorkout) {
+        await deleteWorkout(ongoingWorkoutId);
+      }
+    }
+
+    // Reset the ongoingWorkoutId to null
     setOngoingWorkoutId(null);
   };
 
@@ -85,17 +102,17 @@ export const WorkoutsContextProvider = ({ children }) => {
 
   const deleteWorkout = async (workoutId) => {
     try {
-      await AsyncStorage.removeItem(`@workout_${workoutId}`);
+      await AsyncStorage.removeItem(`workout-${workoutId}`);
 
       // Update the workouts state by removing the deleted workout
       setWorkouts(workouts.filter((workout) => workout.id !== workoutId));
 
       // Update the list of workout IDs in AsyncStorage
       const workoutIds =
-        JSON.parse(await AsyncStorage.getItem("@workout_ids")) || [];
+        JSON.parse(await AsyncStorage.getItem("allWorkoutIds")) || [];
       const updatedWorkoutIds = workoutIds.filter((id) => id !== workoutId);
       await AsyncStorage.setItem(
-        "@workout_ids",
+        "allWorkoutIds",
         JSON.stringify(updatedWorkoutIds)
       );
     } catch (error) {
@@ -107,14 +124,21 @@ export const WorkoutsContextProvider = ({ children }) => {
     try {
       // Save the updated workout to AsyncStorage
       await AsyncStorage.setItem(
-        `@workout_${workoutId}`,
+        `workout-${workoutId}`,
         JSON.stringify(updatedWorkout)
       );
 
       // Update the workouts state with the updated workout
+      /*
       setWorkouts(
         workouts.map((workout) =>
           workout.id === workoutId ? updatedWorkout : workout
+        )
+      );
+      */
+      setWorkouts((prevWorkouts) =>
+        prevWorkouts.map((workout) =>
+          workout.id === workoutId ? { ...workout, ...updatedWorkout } : workout
         )
       );
     } catch (error) {
@@ -172,9 +196,16 @@ export const WorkoutsContextProvider = ({ children }) => {
       );
     }
 
+    // Retrieve all workout IDs, sort them in descending order, and fetch workouts
     const updatedFetchedWorkouts = await Promise.all(
-      (await retrieveAllWorkoutIds()).map((id) => retrieveWorkout(id))
+      (
+        await retrieveAllWorkoutIds()
+      )
+        .sort((a, b) => Number(b) - Number(a)) // sort the IDs in descending order
+        .map((id) => retrieveWorkout(id))
     );
+
+    // Update the workouts state with the sorted workouts
     setWorkouts(updatedFetchedWorkouts);
   };
 
@@ -191,17 +222,6 @@ export const WorkoutsContextProvider = ({ children }) => {
     finishWorkout,
   };
 
-  useEffect(() => {
-    const fetchWorkouts = async () => {
-      const ids = await retrieveAllWorkoutIds();
-      const fetchedWorkouts = await Promise.all(
-        ids.map((id) => retrieveWorkout(id))
-      );
-      setWorkouts(fetchedWorkouts);
-    };
-
-    fetchWorkouts();
-  }, []);
   return (
     <WorkoutsContext.Provider value={value}>
       {children}

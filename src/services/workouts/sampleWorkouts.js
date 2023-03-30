@@ -1,7 +1,7 @@
 export const sampleWorkouts = [
   {
     name: "Workout 1",
-    id: "1",
+    id: "1678861759509",
 
     date: "2023-04-01T10:30:00.000Z",
     exercises: [
@@ -51,7 +51,7 @@ export const sampleWorkouts = [
   },
   {
     name: "Workout 2",
-    id: "2",
+    id: "1677861759509",
     date: "2023-04-02T10:30:00.000Z",
     exercises: [
       {

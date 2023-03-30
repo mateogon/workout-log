@@ -1,29 +1,69 @@
 import React, { useContext } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { FlatList, TouchableOpacity, View } from "react-native";
 import { SafeArea } from "../../../components/utility/safe-area.component";
 import { WorkoutsContext } from "../../../services/workouts/workouts.context";
+import styled from "styled-components/native";
+import { Spacer } from "../../../components/spacer/spacer.component";
+import { formatDate, formatTime } from "../../../utils/dateFormat";
+export const Container = styled.View`
+  flex: 1;
+  padding: ${(props) => props.theme.space[6]};
+`;
+
+export const CreateWorkoutButton = styled.TouchableOpacity`
+  background-color: ${(props) => props.theme.colors.brand.primary};
+  padding: ${(props) => props.theme.space[4]};
+  border-radius: ${(props) => props.theme.space[2]};
+  margin-bottom: ${(props) => props.theme.space[6]};
+`;
+
+export const CreateWorkoutButtonText = styled.Text`
+  color: ${(props) => props.theme.colors.text.inverse};
+  text-align: center;
+  font-size: ${(props) => props.theme.fontSizes.button};
+`;
+
+export const WorkoutCard = styled.TouchableOpacity`
+  background-color: ${(props) => props.theme.colors.bg.primary};
+  padding: ${(props) => props.theme.space[6]};
+  border-radius: ${(props) => props.theme.space[2]};
+  margin-bottom: ${(props) => props.theme.space[3]};
+`;
+
+export const WorkoutCardTitle = styled.Text`
+  font-size: ${(props) => props.theme.fontSizes.title};
+  font-weight: bold;
+  color: ${(props) => props.theme.colors.text.primary};
+`;
+
+export const WorkoutCardSubtitle = styled.Text`
+  font-size: ${(props) => props.theme.fontSizes.body};
+  color: ${(props) => props.theme.colors.text.secondary};
+`;
+
 export const WorkoutsScreen = ({ navigation }) => {
   const { workouts, createWorkout } = useContext(WorkoutsContext);
 
   const renderWorkoutCard = ({ item }) => {
+    const exercisesSummary = item.exercises
+      .map((exercise) => `${exercise.sets.length} x ${exercise.name}`)
+      .join("\n");
+
     return (
-      <TouchableOpacity
-        style={styles.workoutCard}
+      <WorkoutCard
         onPress={() =>
-          navigation.navigate("WorkoutDetails", { workoutId: item.id })
+          navigation.navigate("WorkoutDetails", {
+            workoutId: item.id,
+            workoutIdForHeader: item.id,
+          })
         }
       >
-        <Text style={styles.workoutCardTitle}>{item.name}</Text>
-        <Text style={styles.workoutCardSubtitle}>
-          {item.exercises.length} exercises
-        </Text>
-      </TouchableOpacity>
+        <WorkoutCardTitle>{item.name}</WorkoutCardTitle>
+        <Spacer position="top" size="small" />
+        <WorkoutCardSubtitle>{formatDate(item.date)}</WorkoutCardSubtitle>
+        <Spacer position="top" size="medium" />
+        <WorkoutCardSubtitle>{exercisesSummary}</WorkoutCardSubtitle>
+      </WorkoutCard>
     );
   };
 
@@ -33,52 +73,17 @@ export const WorkoutsScreen = ({ navigation }) => {
     console.log("Navigating to WorkoutEdit...");
     navigation.navigate("WorkoutEdit", { workoutId: newWorkout.id });
   };
+
   return (
-    <SafeArea>
-      <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.createWorkoutButton}
-          onPress={handleCreateWorkout}
-        >
-          <Text style={styles.createWorkoutButtonText}>Create New Workout</Text>
-        </TouchableOpacity>
-        <FlatList
-          data={workouts}
-          renderItem={renderWorkoutCard}
-          keyExtractor={(item) => item.id}
-        />
-      </View>
-    </SafeArea>
+    <Container>
+      <CreateWorkoutButton onPress={handleCreateWorkout}>
+        <CreateWorkoutButtonText>Create New Workout</CreateWorkoutButtonText>
+      </CreateWorkoutButton>
+      <FlatList
+        data={workouts}
+        renderItem={renderWorkoutCard}
+        keyExtractor={(item) => item.id}
+      />
+    </Container>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-  createWorkoutButton: {
-    backgroundColor: "#6200EE",
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 16,
-  },
-  createWorkoutButtonText: {
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
-  workoutCard: {
-    backgroundColor: "#F5F5F5",
-    padding: 16,
-    borderRadius: 5,
-    marginBottom: 8,
-  },
-  workoutCardTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  workoutCardSubtitle: {
-    fontSize: 14,
-    color: "#999999",
-  },
-});
