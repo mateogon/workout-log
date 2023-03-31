@@ -46,6 +46,19 @@ export const WorkoutEditSetCard = ({
   workout,
   setWorkout,
 }) => {
+  const { getExerciseHistory } = useContext(WorkoutsContext);
+  const [exerciseHistory, setExerciseHistory] = useState([]);
+
+  useEffect(() => {
+    const fetchExerciseHistory = async () => {
+      const history = await getExerciseHistory(exercise.id);
+      setExerciseHistory(history);
+    };
+
+    fetchExerciseHistory();
+  }, [exercise.id]);
+
+
   const handleAddSet = () => {
     const newSet = {
       id: exercise.sets.length + 1,
@@ -92,18 +105,16 @@ export const WorkoutEditSetCard = ({
               : "-"}
           </SetColumn>
           <SetInput
-            value={set.weight.toString()}
-            onChangeText={(text) =>
-              handleSetChange(setIndex, "weight", parseFloat(text))
-            }
             keyboardType="numeric"
+  value={set.reps.toString()}
+  onChangeText={(text) => updateReps(set.id, exerciseIndex, parseInt(text))}
+  placeholder={exerciseHistory.length > 0 ? exerciseHistory.slice(-1)[0].reps.toString() : "0"}
           />
           <SetInput
-            value={set.reps.toString()}
-            onChangeText={(text) =>
-              handleSetChange(setIndex, "reps", parseInt(text, 10))
-            }
-            keyboardType="numeric"
+keyboardType="numeric"
+value={set.weight.toString()}
+onChangeText={(text) => updateWeight(set.id, exerciseIndex, parseInt(text))}
+placeholder={exerciseHistory.length > 0 ? exerciseHistory.slice(-1)[0].weight.toString() : "0"}
           />
           <CheckBox
             checked={set.completed}

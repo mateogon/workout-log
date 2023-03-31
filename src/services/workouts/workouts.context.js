@@ -209,6 +209,41 @@ export const WorkoutsContextProvider = ({ children }) => {
     setWorkouts(updatedFetchedWorkouts);
   };
 
+  const updateExerciseHistory = async (workout) => {
+    // Loop through exercises and sets, updating their history
+    workout.exercises.forEach(async (exercise) => {
+      const exerciseHistory = await getExerciseHistory(exercise.id);
+      exercise.sets.forEach((set) => {
+        exerciseHistory.push({
+          date: workout.date,
+          reps: set.reps,
+          weight: set.weight,
+        });
+      });
+  
+      await AsyncStorage.setItem(
+        `exerciseHistory-${exercise.id}`,
+        JSON.stringify(exerciseHistory)
+      );
+    });
+  };
+  
+  const getExerciseHistory = async (exerciseId) => {
+    try {
+      const historyJSON = await AsyncStorage.getItem(`exerciseHistory-${exerciseId}`);
+      if (historyJSON !== null) {
+        return JSON.parse(historyJSON);
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error("Error retrieving exercise history:", error);
+      return [];
+    }
+  };
+
+  
+  
   const value = {
     workouts,
     ongoingWorkoutId,
