@@ -3,9 +3,11 @@ import { Text } from "react-native";
 import { SafeArea } from "../../../components/utility/safe-area.component";
 import { WorkoutsContext } from "../../../services/workouts/workouts.context";
 import { formatDate, formatTime } from "../../../utils/dateFormat";
+import { ExerciseSetDetails } from "../components/workout-details-set-card.component";
 import { View } from "react-native";
-
+import { TouchableOpacity } from "react-native-gesture-handler";
 import styled from "styled-components/native";
+import { Spacer } from "../../../components/spacer/spacer.component";
 
 const WorkoutTitle = styled.Text`
   font-size: 24px;
@@ -46,8 +48,12 @@ const Container = styled.ScrollView`
   flex: 1;
   padding: 8px;
 `;
+const ExerciseContainer = styled.View`
+  padding: 8px;
+  margin-bottom: 10px;
+`;
 
-export const WorkoutDetailsScreen = ({ route }) => {
+export const WorkoutDetailsScreen = ({ route, navigation }) => {
   const { workoutId } = route.params;
   const { retrieveWorkout } = useContext(WorkoutsContext);
   const [workout, setWorkout] = useState(null);
@@ -68,14 +74,16 @@ export const WorkoutDetailsScreen = ({ route }) => {
         <WorkoutTitle>{workout.name}</WorkoutTitle>
         <WorkoutDate>{formatDate(workout.date)}</WorkoutDate>
         {workout.exercises.map((exercise) => (
-          <View key={exercise.id}>
-            <ExerciseName>{exercise.name}</ExerciseName>
-            {exercise.sets.map((set, index) => (
-              <SetRow key={set.id}>
-                {`${index + 1} ${set.weight}kg x ${set.reps}`}
-              </SetRow>
-            ))}
-          </View>
+          <ExerciseContainer key={exercise.id}>
+            <ExerciseSetDetails
+              key={exercise.id}
+              id={exercise.id}
+              exerciseName={exercise.name}
+              date={workout.date}
+              sets={exercise.sets}
+              touchable={true}
+            />
+          </ExerciseContainer>
         ))}
         <DoAgainButton onPress={() => {}}>
           <DoAgainButtonText>Do Again</DoAgainButtonText>

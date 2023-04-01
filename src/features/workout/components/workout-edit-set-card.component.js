@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { CheckBox } from "react-native-elements";
 import styled from "styled-components/native";
+import { WorkoutsContext } from "../../../services/workouts/workouts.context";
 
 const AddSetButton = styled(TouchableOpacity)`
   background-color: #6200ee;
@@ -17,12 +18,16 @@ const AddSetText = styled.Text`
   font-size: 16px;
   font-weight: 400;
 `;
-
-const SetRow = styled.View`
+const ColumnsRow = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   padding-top: 4px;
+`;
+const SetRow = styled.View`
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const SetInput = styled.TextInput`
@@ -46,9 +51,9 @@ export const WorkoutEditSetCard = ({
   workout,
   setWorkout,
 }) => {
-  const { getExerciseHistory } = useContext(WorkoutsContext);
+  const { getExerciseHistory, getPreviousWorkout } =
+    useContext(WorkoutsContext);
   const [exerciseHistory, setExerciseHistory] = useState([]);
-
   useEffect(() => {
     const fetchExerciseHistory = async () => {
       const history = await getExerciseHistory(exercise.id);
@@ -57,7 +62,6 @@ export const WorkoutEditSetCard = ({
 
     fetchExerciseHistory();
   }, [exercise.id]);
-
 
   const handleAddSet = () => {
     const newSet = {
@@ -86,36 +90,68 @@ export const WorkoutEditSetCard = ({
       ),
     });
   };
+  const getPreviousSetData = (setIndex) => {
+    const previousWorkouts = exerciseHistory
+      .filter((workout) => new Date(workout.date) < new Date(exercise.date))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    console.log(previousWorkouts);
+    if (previousWorkouts.length === 0) {
+      return "-";
+    }
+
+    const previousWorkout = previousWorkouts[0];
+
+    if (
+      previousWorkout &&
+      previousWorkout.sets &&
+      previousWorkout.sets[setIndex]
+    ) {
+      const { reps, weight } = previousWorkout.sets[setIndex];
+
+      return `${weight} x ${reps}`;
+    }
+
+    return "-";
+  };
 
   return (
     <Container>
-      <SetRow>
+      <ColumnsRow>
         <SetColumn>Set</SetColumn>
         <SetColumn>Previous</SetColumn>
         <SetColumn>Weight</SetColumn>
         <SetColumn>Reps</SetColumn>
         <View style={{ flexGrow: 0.55 }} />
-      </SetRow>
+      </ColumnsRow>
       {exercise.sets.map((set, setIndex) => (
         <SetRow key={set.id}>
           <SetColumn>{setIndex + 1}</SetColumn>
-          <SetColumn>
-            {set.previous
-              ? `${set.previous.weight} x ${set.previous.reps}`
-              : "-"}
-          </SetColumn>
+          <SetColumn>{getPreviousSetData(setIndex)}</SetColumn>
           <SetInput
             keyboardType="numeric"
-  value={set.reps.toString()}
-  onChangeText={(text) => updateReps(set.id, exerciseIndex, parseInt(text))}
-  placeholder={exerciseHistory.length > 0 ? exerciseHistory.slice(-1)[0].reps.toString() : "0"}
+            value={set.reps.toString()}
+            onChangeText={(text) =>
+              handleSetChange(setIndex, "reps", parseInt(text))
+            }
+            placeholder={
+              exerciseHistory.length > 0 && exerciseHistory.slice(-1)[0].reps
+                ? exerciseHistory.slice(-1)[0].reps.toString()
+                : "0"
+            }
           />
           <SetInput
-keyboardType="numeric"
-value={set.weight.toString()}
-onChangeText={(text) => updateWeight(set.id, exerciseIndex, parseInt(text))}
-placeholder={exerciseHistory.length > 0 ? exerciseHistory.slice(-1)[0].weight.toString() : "0"}
+            keyboardType="numeric"
+            value={set.weight.toString()}
+            onChangeText={(text) =>
+              handleSetChange(setIndex, "weight", parseInt(text))
+            }
+            placeholder={
+              exerciseHistory.length > 0 && exerciseHistory.slice(-1)[0].weight
+                ? exerciseHistory.slice(-1)[0].weight.toString()
+                : "0"
+            }
           />
+
           <CheckBox
             checked={set.completed}
             uncheckedColor="grey"

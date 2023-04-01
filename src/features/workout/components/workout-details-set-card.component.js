@@ -1,63 +1,67 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Text, View } from "react-native";
+import styled from "styled-components/native";
+import { formatDate } from "../../../utils/dateFormat";
+import { TouchableOpacity } from "react-native-gesture-handler";
+const Container = styled.View`
+  border-width: 1px;
+  border-color: #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: white;
+  shadow-color: #000;
+  shadow-offset: 0px 2px;
+  shadow-opacity: 0.25;
+  shadow-radius: 3.84px;
+  elevation: 5;
+`;
 
-export const WorkoutDetailsSetCard = ({ exerciseName, sets }) => {
+const ExerciseName = styled.Text`
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+`;
+
+const SetRow = styled.Text`
+  font-size: 16px;
+`;
+const ExerciseDate = styled.Text`
+  font-size: 15px;
+  font-color: #cecece;
+  margin-bottom: 18px;
+`;
+
+export const ExerciseSetDetails = ({
+  id,
+  exerciseName,
+  date,
+  sets,
+  touchable,
+}) => {
+  const navigation = useNavigation();
   return (
-    <View style={styles.container}>
-      <Text style={styles.exerciseName}>{exerciseName}</Text>
+    <Container>
+      {touchable ? (
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("ExerciseHistory", {
+              exerciseId: id,
+            })
+          }
+        >
+          <ExerciseName>{exerciseName}</ExerciseName>
+        </TouchableOpacity>
+      ) : (
+        <ExerciseName>{exerciseName}</ExerciseName>
+      )}
+
+      <ExerciseDate>{formatDate(date)}</ExerciseDate>
       {sets.map((set, index) => (
-        <View key={`set-${index}`} style={styles.setContainer}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Reps:</Text>
-            <Text style={styles.value}>{set.reps}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Weight:</Text>
-            <Text style={styles.value}>
-              {set.weight ? `${set.weight} kg` : "Bodyweight"}
-            </Text>
-          </View>
-        </View>
+        <SetRow key={set.id}>
+          {`${index + 1} ${set.weight}kg x ${set.reps}`}
+        </SetRow>
       ))}
-    </View>
+    </Container>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 10,
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  exerciseName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  setContainer: {
-    marginBottom: 4,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  value: {
-    fontSize: 16,
-    fontWeight: "400",
-  },
-});

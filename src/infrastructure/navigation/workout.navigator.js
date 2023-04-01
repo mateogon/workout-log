@@ -7,6 +7,7 @@ import { WorkoutsScreen } from "../../features/workout/screens/workouts.screen";
 import { WorkoutDetailsScreen } from "../../features/workout/screens/workout-details.screen";
 import { WorkoutEditScreen } from "../../features/workout/screens/workout-edit.screen";
 import { ExercisePickerScreen } from "../../features/workout/screens/exercise-picker.screen";
+import { ExerciseHistoryScreen } from "../../features/workout/screens/exercise-history.screen";
 import { WorkoutsContext } from "../../services/workouts/workouts.context";
 import { SafeArea } from "../../components/utility/safe-area.component";
 import MenuComponent from "../../features/workout/components/menu.component";
@@ -74,6 +75,13 @@ export const WorkoutStackNavigator = ({ route }) => {
         <WorkoutStack.Screen
           name="ExercisePicker"
           component={ExercisePickerScreen}
+          options={{
+            headerTitle: "",
+          }}
+        />
+        <WorkoutStack.Screen
+          name="ExerciseHistory"
+          component={ExerciseHistoryScreen}
           options={{
             headerTitle: "",
           }}

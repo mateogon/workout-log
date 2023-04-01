@@ -42,8 +42,19 @@ export const WorkoutsContextProvider = ({ children }) => {
       // Check if the ongoing workout is empty (i.e., no exercises)
       const isEmptyWorkout = ongoingWorkout.exercises.length === 0;
 
-      // If the workout is empty, delete it
-      if (isEmptyWorkout) {
+      // If the workout is not empty, save the workout and update exercise history
+      if (!isEmptyWorkout) {
+        const completedWorkout = {
+          ...ongoingWorkout,
+          exercises: ongoingWorkout.exercises.map((exercise) => ({
+            ...exercise,
+            sets: exercise.sets.filter((set) => set.completed),
+          })),
+        };
+        await saveWorkout(completedWorkout);
+        await updateExerciseHistory(completedWorkout);
+      } else {
+        // If the workout is empty, delete it
         await deleteWorkout(ongoingWorkoutId);
       }
     }
@@ -102,6 +113,26 @@ export const WorkoutsContextProvider = ({ children }) => {
 
   const deleteWorkout = async (workoutId) => {
     try {
+      // Retrieve the workout to be deleted
+      const workoutToBeDeleted = await retrieveWorkout(workoutId);
+
+      // Remove the exercise history entries of the workout
+      workoutToBeDeleted.exercises.forEach(async (exercise) => {
+        const exerciseHistory = await getExerciseHistory(exercise.id);
+
+        // Filter out the history entries belonging to the workout being deleted
+        const updatedExerciseHistory = exerciseHistory.filter(
+          (entry) => entry.date !== workoutToBeDeleted.date
+        );
+
+        // Save the updated exercise history to AsyncStorage
+        await AsyncStorage.setItem(
+          `exerciseHistory-${exercise.id}`,
+          JSON.stringify(updatedExerciseHistory)
+        );
+      });
+
+      // Remove the workout from AsyncStorage
       await AsyncStorage.removeItem(`workout-${workoutId}`);
 
       // Update the workouts state by removing the deleted workout
@@ -210,30 +241,58 @@ export const WorkoutsContextProvider = ({ children }) => {
   };
 
   const updateExerciseHistory = async (workout) => {
-    // Loop through exercises and sets, updating their history
     workout.exercises.forEach(async (exercise) => {
       const exerciseHistory = await getExerciseHistory(exercise.id);
+      const today = workout.date.split("T")[0];
+      let todayEntry = exerciseHistory.find((entry) => entry.date === today);
+
+      if (!todayEntry) {
+        todayEntry = {
+          date: today,
+          sets: [],
+        };
+        exerciseHistory.push(todayEntry);
+      }
+
       exercise.sets.forEach((set) => {
-        exerciseHistory.push({
-          date: workout.date,
+        todayEntry.sets.push({
           reps: set.reps,
           weight: set.weight,
         });
       });
-  
+
       await AsyncStorage.setItem(
         `exerciseHistory-${exercise.id}`,
         JSON.stringify(exerciseHistory)
       );
     });
   };
-  
+  const getPreviousWorkout = async (exerciseId) => {
+    const exerciseHistory = await getExerciseHistory(exerciseId);
+
+    // Sort the exercise history in descending order of dates
+    exerciseHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Find the most recent workout (excluding today's date)
+    const today = new Date().toISOString().split("T")[0];
+    const previousWorkout = exerciseHistory.find((item) => item.date !== today);
+
+    return previousWorkout;
+  };
   const getExerciseHistory = async (exerciseId) => {
+    console.log("exerciseId", exerciseId); // To check if correct exerciseId is being passed
     try {
-      const historyJSON = await AsyncStorage.getItem(`exerciseHistory-${exerciseId}`);
+      const historyJSON = await AsyncStorage.getItem(
+        `exerciseHistory-${exerciseId}`
+      );
+      console.log("historyJSON", historyJSON);
       if (historyJSON !== null) {
-        return JSON.parse(historyJSON);
+        const parsedHistory = JSON.parse(historyJSON);
+        console.log("parsedHistory", parsedHistory);
+        parsedHistory.forEach((entry) => (entry.date = new Date(entry.date)));
+        return parsedHistory;
       } else {
+        console.log("No exercise history found");
         return [];
       }
     } catch (error) {
@@ -242,8 +301,6 @@ export const WorkoutsContextProvider = ({ children }) => {
     }
   };
 
-  
-  
   const value = {
     workouts,
     ongoingWorkoutId,
@@ -255,6 +312,9 @@ export const WorkoutsContextProvider = ({ children }) => {
     createWorkout,
     startWorkout,
     finishWorkout,
+    getExerciseHistory,
+    updateExerciseHistory,
+    getPreviousWorkout,
   };
 
   return (

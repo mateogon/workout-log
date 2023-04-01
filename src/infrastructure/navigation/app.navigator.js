@@ -39,7 +39,8 @@ const createScreenOptions = ({ route }, currentRouteName) => {
     headerShown:
       currentRouteName !== "WorkoutEdit" &&
       currentRouteName !== "WorkoutDetails" &&
-      currentRouteName !== "ExercisePicker", //&&
+      currentRouteName !== "ExercisePicker" &&
+      currentRouteName != "ExerciseHistory", //&&
     //currentRouteName !== "Workouts",
     tabBarIcon: ({ focused, size }) => {
       const Color = focused
@@ -70,7 +71,8 @@ const CustomTabBar = ({
     if (
       !ongoingWorkoutId ||
       currentRouteName === "WorkoutEdit" ||
-      currentRouteName === "ExercisePicker"
+      currentRouteName === "ExercisePicker" ||
+      currentRouteName === "ExerciseHistory"
     )
       return null;
     const [formattedTime, setFormattedTime] = useState(
@@ -101,7 +103,9 @@ const CustomTabBar = ({
     );
   };
   const shouldRenderTabBar =
-    currentRouteName !== "WorkoutEdit" && currentRouteName !== "ExercisePicker";
+    currentRouteName !== "WorkoutEdit" &&
+    currentRouteName !== "ExercisePicker" &&
+    currentRouteName !== "ExerciseHistory";
   return (
     <>
       {renderOngoingWorkoutBar()}

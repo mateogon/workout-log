@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState, useLayoutEffect } from "react";
 import { Text, ScrollView } from "react-native";
 import { SafeArea } from "../../../components/utility/safe-area.component";
+import { TouchableOpacity } from "react-native-gesture-handler";
 import { WorkoutsContext } from "../../../services/workouts/workouts.context";
 import { WorkoutEditSetCard } from "../components/workout-edit-set-card.component";
 import { useNavigation } from "@react-navigation/native";
@@ -49,7 +50,7 @@ const AddExerciseButtonText = styled.Text`
 
 const Container = styled.ScrollView`
   flex: 1;
-  padding: 8px;
+  padding: 15px;
 `;
 
 export const WorkoutEditScreen = ({ route, navigation }) => {
@@ -130,7 +131,16 @@ export const WorkoutEditScreen = ({ route, navigation }) => {
         <WorkoutTitle>{workout.name}</WorkoutTitle>
         {workout.exercises.map((exercise, exerciseIndex) => (
           <View key={exercise.id}>
-            <ExerciseName>{exercise.name}</ExerciseName>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("ExerciseHistory", {
+                  exerciseId: exercise.id,
+                })
+              }
+            >
+              <ExerciseName>{exercise.name}</ExerciseName>
+            </TouchableOpacity>
+
             <WorkoutEditSetCard
               exercise={exercise}
               exerciseIndex={exerciseIndex}
