@@ -267,18 +267,7 @@ export const WorkoutsContextProvider = ({ children }) => {
       );
     });
   };
-  const getPreviousWorkout = async (exerciseId) => {
-    const exerciseHistory = await getExerciseHistory(exerciseId);
 
-    // Sort the exercise history in descending order of dates
-    exerciseHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    // Find the most recent workout (excluding today's date)
-    const today = new Date().toISOString().split("T")[0];
-    const previousWorkout = exerciseHistory.find((item) => item.date !== today);
-
-    return previousWorkout;
-  };
   const getExerciseHistory = async (exerciseId) => {
     console.log("exerciseId", exerciseId); // To check if correct exerciseId is being passed
     try {
@@ -314,7 +303,6 @@ export const WorkoutsContextProvider = ({ children }) => {
     finishWorkout,
     getExerciseHistory,
     updateExerciseHistory,
-    getPreviousWorkout,
   };
 
   return (

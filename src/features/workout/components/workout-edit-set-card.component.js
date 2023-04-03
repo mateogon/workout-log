@@ -51,13 +51,14 @@ export const WorkoutEditSetCard = ({
   workout,
   setWorkout,
 }) => {
-  const { getExerciseHistory, getPreviousWorkout } =
-    useContext(WorkoutsContext);
+  const { getExerciseHistory } = useContext(WorkoutsContext);
   const [exerciseHistory, setExerciseHistory] = useState([]);
+
   useEffect(() => {
     const fetchExerciseHistory = async () => {
       const history = await getExerciseHistory(exercise.id);
       setExerciseHistory(history);
+      console.log("history", history);
     };
 
     fetchExerciseHistory();
@@ -90,24 +91,19 @@ export const WorkoutEditSetCard = ({
       ),
     });
   };
-  const getPreviousSetData = (setIndex) => {
-    const previousWorkouts = exerciseHistory
-      .filter((workout) => new Date(workout.date) < new Date(exercise.date))
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
-    console.log(previousWorkouts);
-    if (previousWorkouts.length === 0) {
-      return "-";
+  const getLastExerciseSets = (exerciseHistory) => {
+    if (exerciseHistory.length === 0) {
+      return [];
     }
 
-    const previousWorkout = previousWorkouts[0];
-
-    if (
-      previousWorkout &&
-      previousWorkout.sets &&
-      previousWorkout.sets[setIndex]
-    ) {
-      const { reps, weight } = previousWorkout.sets[setIndex];
-
+    const lastWorkout = exerciseHistory[exerciseHistory.length - 1];
+    return lastWorkout.sets || [];
+  };
+  const getPreviousSetData = (setIndex) => {
+    const lastExerciseSets = getLastExerciseSets(exerciseHistory);
+    console.log("lastExerciseSets", lastExerciseSets);
+    if (lastExerciseSets[setIndex]) {
+      const { reps, weight } = lastExerciseSets[setIndex];
       return `${weight} x ${reps}`;
     }
 
