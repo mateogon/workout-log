@@ -2,6 +2,12 @@ import React, { useContext, useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import { CheckBox } from "react-native-elements";
 import styled from "styled-components/native";
+import {
+  Swipeable,
+  RectButton,
+  GestureHandlerRootView,
+} from "react-native-gesture-handler";
+import { Animated } from "react-native";
 import { WorkoutsContext } from "../../../services/workouts/workouts.context";
 
 const AddSetButton = styled(TouchableOpacity)`
@@ -28,6 +34,7 @@ const SetRow = styled.View`
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  background-color: ${(props) => props.theme.colors.bg.primary};
 `;
 
 const SetInput = styled.TextInput`
@@ -53,16 +60,25 @@ export const WorkoutEditSetCard = ({
 }) => {
   const { getExerciseHistory } = useContext(WorkoutsContext);
   const [exerciseHistory, setExerciseHistory] = useState([]);
+  const [forceUpdate, setForceUpdate] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchExerciseHistory = async () => {
       const history = await getExerciseHistory(exercise.id);
-      setExerciseHistory(history);
-      console.log("history", history);
+      if (isMounted) {
+        setExerciseHistory(history);
+        console.log("history", history);
+      }
     };
 
     fetchExerciseHistory();
-  }, [exercise.id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [exercise.id, forceUpdate]);
 
   const handleAddSet = () => {
     const newSet = {
@@ -82,7 +98,28 @@ export const WorkoutEditSetCard = ({
 
   const handleSetChange = (setIndex, field, value) => {
     const updatedSets = [...exercise.sets];
-    updatedSets[setIndex][field] = value;
+    console.log("handleSetChange called with params: ", setIndex, field, value);
+
+    if (field === "completed" && value === true) {
+      const lastExerciseSets = getLastExerciseSets(exerciseHistory);
+      updatedSets[setIndex]["completed"] = value;
+      if (updatedSets[setIndex]["reps"] === 0) {
+        const placeholderReps =
+          lastExerciseSets.length > 0 && lastExerciseSets[setIndex]?.reps
+            ? lastExerciseSets[setIndex].reps
+            : 0;
+        updatedSets[setIndex]["reps"] = placeholderReps;
+      }
+      if (updatedSets[setIndex]["weight"] === 0) {
+        const placeholderWeight =
+          lastExerciseSets.length > 0 && lastExerciseSets[setIndex]?.weight
+            ? lastExerciseSets[setIndex].weight
+            : 0;
+        updatedSets[setIndex]["weight"] = placeholderWeight;
+      }
+    } else {
+      updatedSets[setIndex][field] = value === "" ? 0 : value;
+    }
 
     setWorkout({
       ...workout,
@@ -90,7 +127,9 @@ export const WorkoutEditSetCard = ({
         index === exerciseIndex ? { ...e, sets: updatedSets } : e
       ),
     });
+    setForceUpdate((prevState) => !prevState);
   };
+
   const getLastExerciseSets = (exerciseHistory) => {
     if (exerciseHistory.length === 0) {
       return [];
@@ -99,15 +138,53 @@ export const WorkoutEditSetCard = ({
     const lastWorkout = exerciseHistory[exerciseHistory.length - 1];
     return lastWorkout.sets || [];
   };
+  const handleDeleteSet = (setIndex) => {
+    const updatedSets = exercise.sets.filter((_, index) => index !== setIndex);
+
+    setWorkout({
+      ...workout,
+      exercises: workout.exercises.map((e, index) =>
+        index === exerciseIndex ? { ...e, sets: updatedSets } : e
+      ),
+    });
+  };
   const getPreviousSetData = (setIndex) => {
     const lastExerciseSets = getLastExerciseSets(exerciseHistory);
-    console.log("lastExerciseSets", lastExerciseSets);
     if (lastExerciseSets[setIndex]) {
       const { reps, weight } = lastExerciseSets[setIndex];
-      return `${weight} x ${reps}`;
+      return { weight, reps };
     }
+    return { weight: 0, reps: 0 };
+  };
 
-    return "-";
+  const renderRightActions = (progress, dragX, setIndex) => {
+    const trans = dragX.interpolate({
+      inputRange: [-50, 0],
+      outputRange: [0, 50],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <Animated.View
+        style={{
+          flexDirection: "row",
+          flex: 1,
+          transform: [{ translateX: trans }],
+        }}
+      >
+        <RectButton
+          onPress={() => handleDeleteSet(setIndex)}
+          style={{
+            backgroundColor: "red",
+            justifyContent: "center",
+            alignItems: "flex-end",
+            width: "100%",
+          }}
+        >
+          <View />
+        </RectButton>
+      </Animated.View>
+    );
   };
 
   return (
@@ -120,43 +197,81 @@ export const WorkoutEditSetCard = ({
         <View style={{ flexGrow: 0.55 }} />
       </ColumnsRow>
       {exercise.sets.map((set, setIndex) => (
-        <SetRow key={set.id}>
-          <SetColumn>{setIndex + 1}</SetColumn>
-          <SetColumn>{getPreviousSetData(setIndex)}</SetColumn>
-          <SetInput
-            keyboardType="numeric"
-            value={set.reps.toString()}
-            onChangeText={(text) =>
-              handleSetChange(setIndex, "reps", parseInt(text))
+        <GestureHandlerRootView>
+          <Swipeable
+            key={set.id}
+            renderRightActions={(progress, dragX) =>
+              renderRightActions(progress, dragX, setIndex)
             }
-            placeholder={
-              exerciseHistory.length > 0 && exerciseHistory.slice(-1)[0].reps
-                ? exerciseHistory.slice(-1)[0].reps.toString()
-                : "0"
-            }
-          />
-          <SetInput
-            keyboardType="numeric"
-            value={set.weight.toString()}
-            onChangeText={(text) =>
-              handleSetChange(setIndex, "weight", parseInt(text))
-            }
-            placeholder={
-              exerciseHistory.length > 0 && exerciseHistory.slice(-1)[0].weight
-                ? exerciseHistory.slice(-1)[0].weight.toString()
-                : "0"
-            }
-          />
-
-          <CheckBox
-            checked={set.completed}
-            uncheckedColor="grey"
-            checkedColor="green"
-            onPress={() =>
-              handleSetChange(setIndex, "completed", !set.completed)
-            }
-          />
-        </SetRow>
+            onSwipeableRightOpen={() => {
+              handleDeleteSet(setIndex);
+            }}
+            overshootRight={false}
+            rightThreshold={50}
+          >
+            <SetRow>
+              <SetColumn>{setIndex + 1}</SetColumn>
+              <SetColumn>
+                {getPreviousSetData(setIndex).weight === 0 &&
+                getPreviousSetData(setIndex).reps === 0
+                  ? "-"
+                  : `${getPreviousSetData(setIndex).weight} x ${
+                      getPreviousSetData(setIndex).reps
+                    }`}
+              </SetColumn>
+              <SetInput
+                keyboardType="numeric"
+                value={
+                  exercise.sets[setIndex].reps === 0
+                    ? ""
+                    : exercise.sets[setIndex].reps.toString()
+                }
+                onChangeText={(text) =>
+                  handleSetChange(
+                    setIndex,
+                    "reps",
+                    text === "" ? "" : parseInt(text)
+                  )
+                }
+                placeholder={
+                  getPreviousSetData(setIndex).reps
+                    ? getPreviousSetData(setIndex).reps.toString()
+                    : "0"
+                }
+                placeholderTextColor="grey"
+              />
+              <SetInput
+                keyboardType="numeric"
+                value={
+                  exercise.sets[setIndex].weight === 0
+                    ? ""
+                    : exercise.sets[setIndex].weight.toString()
+                }
+                onChangeText={(text) =>
+                  handleSetChange(
+                    setIndex,
+                    "weight",
+                    text === "" ? "" : parseInt(text)
+                  )
+                }
+                placeholder={
+                  getPreviousSetData(setIndex).weight
+                    ? getPreviousSetData(setIndex).weight.toString()
+                    : "0"
+                }
+                placeholderTextColor="grey"
+              />
+              <CheckBox
+                checked={set.completed}
+                uncheckedColor="grey"
+                checkedColor="green"
+                onPress={() =>
+                  handleSetChange(setIndex, "completed", !set.completed)
+                }
+              />
+            </SetRow>
+          </Swipeable>
+        </GestureHandlerRootView>
       ))}
       <AddSetButton onPress={handleAddSet}>
         <AddSetText>Add Set</AddSetText>
